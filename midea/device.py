@@ -133,7 +133,8 @@ class air_conditioning_device(device):
         self._on_timer = None
         self._off_timer = None
         self._indoor_temperature = 0.0
-        self._outdoor_temperature = 0.0
+        self._outdoor_temperature = 0.0 # this is wrong
+        self._humidity = 0  # not sure if this one is working either
 
     def refresh(self):
         cmd = request_status_command(self.type)
@@ -186,6 +187,7 @@ class air_conditioning_device(device):
         self._outdoor_temperature = res.outdoor_temperature
         self._timer_on = res.on_timer
         self._timer_off = res.off_timer
+        self._humidity = res.humidity
 
     @property
     def audible_feedback(self):
@@ -282,6 +284,10 @@ class air_conditioning_device(device):
     @property
     def off_timer(self):
         return self._off_timer
+
+    @property
+    def humidity(self):
+        return self._humidity
 
 
 class unknown_device(device):

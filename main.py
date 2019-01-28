@@ -22,13 +22,18 @@ logging.basicConfig(format='%(asctime)s %(message)s', level=logging.DEBUG)
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
+client_inst = None
+devices = None
 
-midea_client = midea_client(settings.APPKEY, settings.EMAIL, settings.PASSWORD)
-devices = midea_client.devices()
+
+def midea_init():
+    global client_inst, devices
+    client_inst = midea_client(settings.APPKEY, settings.EMAIL, settings.PASSWORD)
+    devices = client_inst.devices()
 
 
 # properties which only ever go from the midea -> oh
-AC_RO_PROPERTIES = ('active', 'online', 'indoor_temperature', 'outdoor_temperature')
+AC_RO_PROPERTIES = ('active', 'online', 'indoor_temperature', 'outdoor_temperature', )#'humidity')
 
 # properties which can go in either direction
 AC_RW_PROPERTIES = ('power_state', 'target_temperature', 'operational_mode', 'fan_speed',
@@ -145,7 +150,7 @@ def force_to_string(name, val):
             return 'OFF'
 
     # these are floating point strings, always include a decimal
-    if name in {'indoor_temperature', 'outdoor_temperature', 'target_temperature'}:
+    if name in {'indoor_temperature', 'outdoor_temperature', 'target_temperature', 'humidity'}:
         return str(float(val))
 
     # these are enums.  We store them as their numeric value
@@ -306,6 +311,7 @@ def openhab_to_midea():
 
 
 def main_loop():
+    midea_init()
     init_last_values()
     last_oh_refresh = 0
     last_midea_refresh = 0
@@ -322,6 +328,18 @@ def main_loop():
             time.sleep(1)
     except KeyboardInterrupt:
         logging.warning('Shutting down in response to keyboard interrupt')
+        return True
+    except Exception as e:
+        print('Exception: ' + repr(e))
+        logging.exception('Failure in main loop')
+        return False
 
 if __name__ == '__main__':
-    main_loop()
+
+    should_quit = False
+    restart_count = 0
+    while not should_quit and restart_count < 10:
+        should_quit = main_loop()
+        restart_count += 1
+        if not should_quit:
+            time.sleep(10.0)

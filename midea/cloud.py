@@ -72,6 +72,8 @@ class cloud:
 
             data['sign'] = self.security.sign(url, data)
 
+            logging.debug('API call ' + endpoint + ': ' + repr(data))
+
             # POST the endpoint with the payload
             r = requests.post(url=url, data=data)
 
@@ -81,7 +83,8 @@ class cloud:
 
         # Check for errors, raise if there are any
         if response['errorCode'] != '0':
-            self.handle_api_error(int(response['errorCode']), response['msg'])
+            if endpoint != "user/login":    # hack to stop recursion problem on login failures
+                self.handle_api_error(int(response['errorCode']), response['msg'])
             # If you don't throw, then retry
             logging.info("Retrying API call: '{}'".format(endpoint))
             self._retries += 1
@@ -98,7 +101,7 @@ class cloud:
         Get the login ID from the email address
         """
         # let's assume that this doesn't change
-        if self.login_id: return self.login_id
+        #if self.login_id: return self.login_id
 
         response = self.api_request("user/login/id/get", {
             'loginAccount': self.login_account
