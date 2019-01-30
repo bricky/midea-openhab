@@ -1,5 +1,5 @@
 '''
-Copy this file to settings.py and put your real setting in here.
+Copy this file to settings.py and put your real settings in there.
 '''
 
 

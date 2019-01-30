@@ -209,6 +209,7 @@ class cloud:
             self.login()
 
         def throw():
+            if error_code == 3123: raise DeviceOfflineException()
             raise ValueError(error_code, message)
 
         def ignore():
@@ -224,3 +225,7 @@ class cloud:
 
         handler = error_handlers.get(error_code, throw)
         handler()
+
+
+class DeviceOfflineException(Exception):
+    pass

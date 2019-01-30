@@ -14,6 +14,7 @@ import requests
 from midea.client import client as midea_client
 from midea.device import air_conditioning_device
 import settings
+from midea.cloud import DeviceOfflineException
 
 # our default logging level
 logging.basicConfig(format='%(asctime)s %(message)s', level=logging.DEBUG)
@@ -262,6 +263,7 @@ def update_from_midea(device):
 
 
 def midea_to_openhab():
+    global devices
     for device in devices:
         if not isinstance(device, air_conditioning_device):
             logging.info('Skipping device, not an a/c: {}, {} {} {} {}'.format(device.name, device.model_number, device.serial_number, device.type))
@@ -271,19 +273,24 @@ def midea_to_openhab():
             logging.info('Skipping device {}, not one of ours'.format(device.name))
             continue
 
-        logging.debug('Refreshing {}'.format(device.name))
-        device.refresh()
+        try:
+            logging.debug('Refreshing {}'.format(device.name))
+            device.refresh()
 
-        changes = update_from_midea(device)
+            changes = update_from_midea(device)
 
-        # send each change to openhab
-        for k,v in changes.items():
-            set_oh_value('ac_{}_{}'.format(device.name, k), v)
-            _last_oh_values[device.name][k] = force_to_string(k, v)
+            # send each change to openhab
+            for k,v in changes.items():
+                set_oh_value('ac_{}_{}'.format(device.name, k), v)
+                _last_oh_values[device.name][k] = force_to_string(k, v)
+        except DeviceOfflineException:
+            logging.warning('Device {} is offline, skipping midea->openhab run, and refreshing devices list'.format(device.name))
+            devices = client_inst.devices()
 
 
 
 def openhab_to_midea():
+    global devices
     for aircon in settings.AIRCONS:
         changes = update_from_openhab(aircon)
 
@@ -298,15 +305,20 @@ def openhab_to_midea():
             if device is None:
                 raise Exception('Unable to locate device with name: ' + aircon)
 
-            # make sure that what we have is current
-            device.refresh()
+            try:
+                # make sure that what we have is current
+                device.refresh()
 
-            for k,v in changes.items():
-                logging.debug('Push to Midea {}: {} = {}'.format(aircon, k, v))
-                setattr(device, k, force_to_midea(k, v))
-                _last_midea_values[device.name][k] = force_to_string(k, v)
+                for k,v in changes.items():
+                    logging.debug('Push to Midea {}: {} = {}'.format(aircon, k, v))
+                    setattr(device, k, force_to_midea(k, v))
+                    _last_midea_values[device.name][k] = force_to_string(k, v)
 
-            device.apply()
+
+                device.apply()
+            except DeviceOfflineException:
+                logging.warning('Device {} is offline, not updating settings, and refreshing devices list'.format(device.name))
+                devices = client_inst.devices()
 
 
 
