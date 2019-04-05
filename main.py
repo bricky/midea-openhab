@@ -350,7 +350,7 @@ if __name__ == '__main__':
 
     should_quit = False
     restart_count = 0
-    while not should_quit and restart_count < 10:
+    while not should_quit and restart_count < 100:
         should_quit = main_loop()
         restart_count += 1
         if not should_quit:

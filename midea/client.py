@@ -36,7 +36,7 @@ class client:
         self._devices = {}  # type: Dict[str, device]
 
     def setup(self):
-        if self._cloud.session is None:
+        if not self._cloud.session:
             self._cloud.login()
 
     def devices(self):

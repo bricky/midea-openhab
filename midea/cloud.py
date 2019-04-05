@@ -6,6 +6,7 @@ from threading import Lock
 
 from midea.security import security
 import logging
+import time
 
 # The Midea cloud client is by far the more obscure part of this library, and without some serious reverse engineering
 # this would not have been possible. Thanks Yitsushi for the ruby implementation. This is an adaptation to Python 3
@@ -108,14 +109,14 @@ class cloud:
         })
         self.login_id = response['loginId']
 
-    def login(self):
+    def login(self, force=False):
         """
         Performs a user login with the credentials supplied to the constructor
         """
-        if self.login_id is None:
+        if not self.login_id or force:
             self.get_login_id()
 
-        if self.session:
+        if not force and self.session:
             return  # Don't try logging in again, someone beat this thread to it
 
         logging.debug('Call to login with {} {} {}'.format(self.login_id, self.login_account, self.password))
@@ -127,6 +128,7 @@ class cloud:
         })
 
         self.security.accessToken = self.session['accessToken']
+        if force: time.sleep(10)    # be patient for a forced login
 
     def list(self, home_group_id=-1):
         """
@@ -197,11 +199,17 @@ class cloud:
 
     def handle_api_error(self, error_code, message: str):
 
-        def restart_full():
-            logging.info("Restarting full: '{}' - '{}'".format(error_code, message))
+        def restart():
+            logging.info("Restarting: '{}' - '{}'".format(error_code, message))
             self.session = None
             self.get_login_id()
             self.login()
+
+        def force_restart():
+            logging.info("Restarting forced: '{}' - '{}'".format(error_code, message))
+            self.session = None
+            self.get_login_id()
+            self.login(True)
 
         def session_restart():
             logging.info("Restarting session: '{}' - '{}'".format(error_code, message))
@@ -217,8 +225,8 @@ class cloud:
 
         error_handlers = {
             3176: ignore,          # The asyn reply does not exist.
-            3106: session_restart,  # invalidSession.
-            3144: restart_full,
+            3106: force_restart,  # invalidSession.
+            3144: restart,
             3004: session_restart,  # value is illegal.
             9999: session_restart,  # system error.
         }
