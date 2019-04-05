@@ -3,3 +3,4 @@
 /settings.py
 *.pyc
 /stuff/
+/.settings/
