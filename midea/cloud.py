@@ -89,10 +89,10 @@ class cloud:
             # If you don't throw, then retry
             logging.info("Retrying API call: '{}'".format(endpoint))
             self._retries += 1
-            if(self._retries < 3):
+            if self._retries < 3:
                 return self.api_request(endpoint, args)
             else:
-                raise RecursionError()
+                raise RecursionError(response.get('msg'))
 
         self._retries = 0
         return response['result']
