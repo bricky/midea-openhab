@@ -192,7 +192,7 @@ def force_to_midea(name, val):
 
     # ints
     if name in {'target_temperature'}:
-        return int(float(val))
+        return float(val)
 
     if name == 'operational_mode':
         if val.replace('.', '', 1).isdigit():
